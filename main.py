@@ -1,8 +1,7 @@
 
 from flask import Flask, render_template, Response, request
 from camera import VideoCamera
-import telepot
-from telepot.loop import MessageLoop
+from message import settingUp, send_door_message, send_door_photo
 import time
 import os
 
@@ -11,9 +10,7 @@ app = Flask(__name__)
 
 #background process happening without any refreshing
 
-telegramID = 0
-bot = telepot.Bot('1762984493:AAHHm6S4qCJjqWLi4aNz5Qq8SIIlOJM798A')
-
+update = None
 
 @app.route('/')
 def move():
@@ -22,8 +19,11 @@ def move():
 
 def gen(camera):
     while True:
-        #frame = camera.get_frame()
-        frame = camera.get_frame_and_message(telegramID, bot)
+        frame, face_names = camera.get_frame()
+        if update:
+            #send_door_message(update=update, face_names=face_names)
+            send_door_photo(update, face_names, frame)
+
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
@@ -33,19 +33,13 @@ def video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-def handle(msg):
-    content_type, chat_type, chat_id = telepot.glance(msg)
-    print(content_type, chat_type, chat_id)
 
-    if content_type == 'text' and msg['text'] == '/start':
-            bot.sendMessage(chat_id, 'Hello')
-            global telegramID
-            telegramID = chat_id
 
 @app.route("/telegram")
 def telegram():
-    MessageLoop(bot, handle).run_as_thread()
-    return "Send a message to the bot with written /start\n{tID}".format(tID = telegramID)
+    global update
+    update = settingUp()
+    return f"Send a message to the bot with written /start\n{update}"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, threaded=True)
+    app.run(threaded=True)

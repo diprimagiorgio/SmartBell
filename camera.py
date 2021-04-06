@@ -8,8 +8,6 @@ import face_recognition
 import cv2
 import numpy as np
 import os
-import telepot
-from datetime import datetime
 
 face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
 ds_factor = 0.6
@@ -18,8 +16,8 @@ ds_factor = 0.6
 known_person = []  # Name of person string
 known_image = []  # Image object
 known_face_encodings = []  # Encoding object
-last_visit = []
-last_visit.append(datetime.now())
+
+
 # Initialize some variables
 face_locations = []
 face_encodings = []
@@ -42,18 +40,17 @@ for file in os.listdir("profiles"):
         pass
 
 
-# print(len(known_face_encodings))
-# print(known_person)
-
 
 class VideoCamera(object):
     def __init__(self):
+        #get a reference to the camera
         self.video = cv2.VideoCapture(0)
 
     def __del__(self):
         self.video.release()
 
     def get_people(self):
+        #graba single frame of the video
         success, image = self.video.read()
 
         process_this_frame = True
@@ -72,8 +69,8 @@ class VideoCamera(object):
             # return a list of 128-dimensional face encodings
             face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-            global name_gui
-            # face_names = []
+
+            face_names = []
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s), return a list of true or false
                 matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=0.6)
@@ -93,12 +90,15 @@ class VideoCamera(object):
                 face_names.append(name)
                 print(face_names)
 
-                name_gui = name
-
         process_this_frame = not process_this_frame
         return (image, face_locations, face_names)
 
+    def clean_names(self) -> None:
+        for x in range(0, face_names.__len__()):
+            face_names.pop(0)
+
     def get_frame(self):
+        self.clean_names()
         (image, face_locations, face_names) = self.get_people()
 
         # Display the results
@@ -115,24 +115,8 @@ class VideoCamera(object):
             # Draw a label with a name below the face
             cv2.rectangle(image, (left, bottom - 35), (right, bottom), (255, 255, 255), cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(image, name_gui, (left + 10, bottom - 10), font, 1.0, (0, 0, 0), 1)
+            cv2.putText(image, name, (left + 10, bottom - 10), font, 1.0, (0, 0, 0), 1)
 
         ret, jpeg = cv2.imencode('.jpg', image)
-        return jpeg.tobytes()
+        return jpeg.tobytes(), face_names
 
-    def getIndexPerson(self, Name):
-        return 0
-    def get_frame_and_message(self, telegramID, bot):
-        img = self.get_frame()
-        for name in face_names:
-            indexPerson = 0
-            if name != "Unknown" and last_visit:
-                now =  datetime.now()
-                timeDelta =  now - last_visit[indexPerson]
-                if (timeDelta.total_seconds() > 60):
-                    last_visit[indexPerson] = now
-                    message = "Hey there is {name} at the door"
-                    bot.sendMessage(telegramID, message.format(name = name))
-        for x in range(0, face_names.__len__()):
-            face_names.pop(0)
-        return img
