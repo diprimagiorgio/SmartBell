@@ -12,8 +12,8 @@ bot.
 
 import logging
 
-from telegram import Update, ForceReply
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
 from datetime import datetime
 from typing import List
 
@@ -22,6 +22,7 @@ from typing import List
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
+ADD_NAME, ADD_PHOTO = range(2)
 
 logger = logging.getLogger(__name__)
 last_visit = {} # last time that we have sent a message for that person
@@ -37,13 +38,42 @@ def telegram_init() -> Update:
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
 
+    # Add conversation handler to add a new face to the know person of the bell
+    add_handler = ConversationHandler(
+        entry_points=[CommandHandler('add', add_cmd)],
+        states={
+            ADD_NAME:[MessageHandler(Filters.text & ~Filters.command, add_name_handler )],
+            ADD_PHOTO: [MessageHandler(Filters.photo, add_image_handler)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+
+    # List all the know person of the bell
+    """conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('list', add_cmd)],
+        states={
+    },
+    fallbacks = [CommandHandler('cancel', cancel)],
+    )"""
+
+    # Remove one person from the know one of the database
+    """remove_handler = ConversationHandler(
+        entry_points=[CommandHandler('remove', rm_cmd)],
+        states={
+            SELECT : 
+            SURE:
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )"""
+
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(add_handler)
     #I'd like to simulate a conversation after the command
     #dispatcher.add_handler(CommandHandler("newFace", new_face_command))
 
-    dispatcher.add_handler(MessageHandler(Filters.photo, image_handler))
+    #dispatcher.add_handler(MessageHandler(Filters.photo, image_handler))
 
     # Start the Bot
     updater.start_polling()
@@ -52,7 +82,9 @@ def telegram_init() -> Update:
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
-#------------------------------------------------- COMMANDS
+#------------------------------------------------- GENERAL COMMANDS
+cmd_keyboard = [['/add', '/list', '/remove', '/help']]
+
 def start(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     global user
@@ -61,8 +93,21 @@ def start(update: Update, _: CallbackContext) -> None:
         f'Hi {user.mention_markdown_v2()}\!'
     )
     logger.info(f'{user} si è loggato ')
+    update.message.reply_text(
+        'Hi! My name is The Smart Bell Bot. I will help you to see who is at your door, without needing to move from your sofa. '
+        'You need to send me the img of the person that i want to recognise with the command \ add .\n\n'
+        'to have more info you can always ask me with \ help command',
+        reply_markup=ReplyKeyboardMarkup(cmd_keyboard),
+    )
 
+def cancel(update: Update, _: CallbackContext) -> int:
+    user = update.message.from_user
+    logger.info("User %s canceled the conversation.", user.first_name)
+    update.message.reply_text(
+        'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
+    )
 
+    return ConversationHandler.END
 
 def help_command(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
@@ -71,27 +116,54 @@ def help_command(update: Update, _: CallbackContext) -> None:
 def new_face_command(update: Update, _: CallbackContext) -> None:
     #file = bot.getFile(update.message.photo[-1].file_id)
     print(update.message.photo.file_id)
-#------------------------------------------------- RECEIVE PHOTO
+#------------------------------------------------- ADD COMMAND
+def add_cmd(update: Update, _: CallbackContext) -> int:
+    user = update.message.from_user
+    logger.info("User %s is adding a new picture ", user.first_name)
+    update.message.reply_text(
+        'Introduce me a friend of you! Please send me her/his name, '
+        'so I know how to call her/him.',
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    return ADD_NAME
+add_name = None
+def add_image_handler(update: Update, _: CallbackContext) -> int:
+    global smart_bell
+    user = update.message.from_user
+    photo_file = update.message.photo[-1].get_file()
+    photo_file.download(f'profiles/{add_name}.jpg')
+    logger.info("Photo of %s: %s", user.first_name, f'{add_name}.jpg')
+    # now someone have to add to the list of people
+    if smart_bell.add_person(f'{add_name}.jpg'):
+        update.message.reply_text(
+            f'Gorgeous! Image of {add_name} uploaded',
+            reply_markup=ReplyKeyboardRemove(),
+
+        )
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(
+            'Error I\'m not able to find the face in the image, can you send a new one?'
+        )
+        return ADD_PHOTO
+
+def add_name_handler(update: Update, _: CallbackContext) -> int:
+    global add_name
+    user = update.message.from_user
+    add_name = update.message.text
+    logger.info("Name of the friend of of %s: %s", user.first_name, add_name)
+    update.message.reply_text(f'Thank you! Now I need also a picture to know how does {add_name} look like.')
+    return ADD_PHOTO
+
+
 smart_bell = None
 
 #TODO  fix this is orrible, maybe i should do a class
 def set_smart_bell(sm_bell):
     global smart_bell
     smart_bell = sm_bell
-def image_handler(update: Update, _: CallbackContext) -> None:
-    global smart_bell
-    photo_file = update.message.photo[-1].get_file()
-    photo_file.download(f'profiles/{update.message.caption}.jpg')
-    logger.info("Photo of %s: %s", user.first_name, f'{update.message.caption}.jpg')
-    #now someone have to add to the list of people
-    if smart_bell.add_person(f'{update.message.caption}.jpg') :
-        update.message.reply_text(
-            'Gorgeous! Image uploaded'
-        )
-    else:
-        update.message.reply_text(
-            'Error I\'m not able to find the face in the image, can you send a new one?'
-        )
+#def image_handler(update: Update, _: CallbackContext) -> None:
 
 
 #------------------------------------------------- SEND UPDATE
