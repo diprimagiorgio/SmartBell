@@ -1,25 +1,20 @@
 
 from flask import Flask, render_template, Response, request
-from camera import VideoCamera
-from message import settingUp, send_door_message, send_door_photo
-import time
-import os
+from smartbell import SmartBell
+from message import telegram_init, send_door_message, send_door_photo, set_smart_bell
+
 
 app = Flask(__name__)
-#app = Flask(__name__, template_folder='/var/www/html/templates')
-
-#background process happening without any refreshing
-
 update = None
-
+smart_bell = None
 @app.route('/')
 def move():
     return render_template('index.html')
 
 
-def gen(camera):
+def gen(smart_bell: SmartBell):
     while True:
-        frame, face_names = camera.get_frame()
+        frame, face_names = smart_bell.get_frame()
         if update:
             #send_door_message(update=update, face_names=face_names)
             send_door_photo(update, face_names, frame)
@@ -29,17 +24,22 @@ def gen(camera):
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(VideoCamera()),
+    return Response(gen(smart_bell),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 
 
-@app.route("/telegram")
-def telegram():
-    global update
-    update = settingUp()
-    return f"Send a message to the bot with written /start\n{update}"
+@app.route("/init")
+def init():
+    global  update, smart_bell
+    # for telegram
+    update = telegram_init()
+    # for camera
+    smart_bell = SmartBell()
+
+    set_smart_bell(smart_bell)
+    return "Init done"
 
 if __name__ == '__main__':
     app.run(threaded=True)

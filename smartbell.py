@@ -9,47 +9,47 @@ import cv2
 import numpy as np
 import os
 
-face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
-ds_factor = 0.6
-
-# Store objects in array
-known_person = []  # Name of person string
-known_image = []  # Image object
-known_face_encodings = []  # Encoding object
 
 
-# Initialize some variables
-face_locations = []
-face_encodings = []
-face_names = []
-process_this_frame = True
+class SmartBell:
+    face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
+    tolerance = 0.6
 
-# Loop to add images in friends folder
-for file in os.listdir("profiles"):
-    try:
-        # Extracting person name from the image filename eg: david.jpg
-        known_person.append(file.replace(".jpg", ""))
-        file = os.path.join("profiles/", file)
-        known_image = face_recognition.load_image_file(file)
-        # print("test")
-        # print(face_recognition.face_encodings(known_image)[0])
-        known_face_encodings.append(face_recognition.face_encodings(known_image)[0])
-        # print(known_face_encodings)
-
-    except Exception as e:
-        pass
+    # Store objects in array
+    known_person = []  # Name of person string
+    known_face_encodings = []  # Encoding object
 
 
 
-class VideoCamera(object):
     def __init__(self):
         #get a reference to the camera
         self.video = cv2.VideoCapture(0)
+        # Loop to add images in friends folder
+        for file in os.listdir("profiles"):
+           self.add_person(file)
 
     def __del__(self):
         self.video.release()
-
+    def add_person(self, file: str) -> bool:
+        try:
+            # Extracting person name from the image filename eg: david.jpg
+            self.known_person.append(file.replace(".jpg", ""))
+            file = os.path.join("profiles/", file)
+            known_image = face_recognition.load_image_file(file)
+            self.known_face_encodings.append(face_recognition.face_encodings(known_image)[0])
+            return True
+        except IndexError as e:
+            print (f"Impossible to find the person in the img : {file}")
+            return False
+        except Exception as e:
+            print(f"Error in adding a person \n{e}")
+            return False
     def get_people(self):
+        # Initialize some variables
+        face_locations = []
+        face_encodings = []
+        face_names = []
+
         #graba single frame of the video
         success, image = self.video.read()
 
@@ -73,17 +73,17 @@ class VideoCamera(object):
             face_names = []
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s), return a list of true or false
-                matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=0.6)
+                matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding, tolerance=self.tolerance)
                 name = "Unknown"
 
                 # print(face_encoding)
                 print(matches)
                 # we can have multiple faces that match, but we want the most similar
-                face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+                face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
                 best_match_index = np.argmin(face_distances)
                 #if the face with the minimum distance is, True because of the function compare_faces
                 if matches[best_match_index]:
-                    name = known_person[best_match_index]
+                    name = self.known_person[best_match_index]
 
                 print(name)
                 # print(face_locations)
@@ -93,12 +93,8 @@ class VideoCamera(object):
         process_this_frame = not process_this_frame
         return (image, face_locations, face_names)
 
-    def clean_names(self) -> None:
-        for x in range(0, face_names.__len__()):
-            face_names.pop(0)
 
     def get_frame(self):
-        self.clean_names()
         (image, face_locations, face_names) = self.get_people()
 
         # Display the results
