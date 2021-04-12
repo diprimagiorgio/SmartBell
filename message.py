@@ -12,11 +12,11 @@ bot.
 
 import logging
 
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler, CallbackQueryHandler
 from datetime import datetime
 from typing import List
-
+from smartbell import SmartBell
 
 # Enable logging
 logging.basicConfig(
@@ -49,9 +49,10 @@ def telegram_init() -> Update:
     )
 
     # List all the know person of the bell
-    """conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('list', add_cmd)],
+    """list_handler = ConversationHandler(
+        entry_points=[CommandHandler('list', list_cmd)],
         states={
+            1:[CallbackQueryHandler(remove_callback)]
     },
     fallbacks = [CommandHandler('cancel', cancel)],
     )"""
@@ -70,6 +71,10 @@ def telegram_init() -> Update:
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(add_handler)
+
+    dispatcher.add_handler(CommandHandler("list", list_cmd))
+    dispatcher.add_handler(CallbackQueryHandler(remove_callback))
+
     #I'd like to simulate a conversation after the command
     #dispatcher.add_handler(CommandHandler("newFace", new_face_command))
 
@@ -117,6 +122,13 @@ def new_face_command(update: Update, _: CallbackContext) -> None:
     #file = bot.getFile(update.message.photo[-1].file_id)
     print(update.message.photo.file_id)
 #------------------------------------------------- ADD COMMAND
+add_name = None
+smart_bell : SmartBell = None
+#TODO  fix this is horrible, maybe i should do a class
+def set_smart_bell(sm_bell):
+    global smart_bell
+    smart_bell = sm_bell
+
 def add_cmd(update: Update, _: CallbackContext) -> int:
     user = update.message.from_user
     logger.info("User %s is adding a new picture ", user.first_name)
@@ -127,7 +139,6 @@ def add_cmd(update: Update, _: CallbackContext) -> int:
     )
 
     return ADD_NAME
-add_name = None
 def add_image_handler(update: Update, _: CallbackContext) -> int:
     global smart_bell
     user = update.message.from_user
@@ -147,7 +158,6 @@ def add_image_handler(update: Update, _: CallbackContext) -> int:
             'Error I\'m not able to find the face in the image, can you send a new one?'
         )
         return ADD_PHOTO
-
 def add_name_handler(update: Update, _: CallbackContext) -> int:
     global add_name
     user = update.message.from_user
@@ -155,15 +165,34 @@ def add_name_handler(update: Update, _: CallbackContext) -> int:
     logger.info("Name of the friend of of %s: %s", user.first_name, add_name)
     update.message.reply_text(f'Thank you! Now I need also a picture to know how does {add_name} look like.')
     return ADD_PHOTO
-
-
-smart_bell = None
-
-#TODO  fix this is orrible, maybe i should do a class
-def set_smart_bell(sm_bell):
+#------------------------------------------------- LIST COMMAND
+#TODO i'd like to have two different handler one to show the picture and one to remove the person
+def list_cmd(update: Update, _: CallbackContext) -> int:
     global smart_bell
-    smart_bell = sm_bell
-#def image_handler(update: Update, _: CallbackContext) -> None:
+    buttons = []
+
+    for name in smart_bell.known_person:
+        buttons.append( [ InlineKeyboardButton(text=name,
+                                callback_data=f"{name}"),
+                          InlineKeyboardButton(text= u"\u274C",
+                                callback_data=f"{name}")
+                          ])
+
+    user = update.message.from_user
+    logger.info("User %s has asked to receive the list ", user.first_name)
+    update.message.reply_text( "Choose the user to remove or press the name to show the picture saved", reply_markup = InlineKeyboardMarkup(buttons) )
+    return 1
+
+def remove_callback(update: Update, _: CallbackContext) -> int:
+    query = update.callback_query
+
+    # CallbackQueries need to be answered, even if no notification to the user is needed
+    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
+    query.answer()
+    if smart_bell.remove_person(query.data):
+        query.edit_message_text(text=f"Removed with success : {query.data}")
+    else:
+        query.edit_message_text(text=f"Error I was not able to remove the person : {query.data}")
 
 
 #------------------------------------------------- SEND UPDATE

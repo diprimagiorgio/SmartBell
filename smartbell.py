@@ -12,10 +12,14 @@ import os
 
 
 class SmartBell:
+
     face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
     tolerance = 0.6
 
     # Store objects in array
+
+    # maybe I'd like to use a dictonary or store in a database
+
     known_person = []  # Name of person string
     known_face_encodings = []  # Encoding object
 
@@ -44,6 +48,22 @@ class SmartBell:
         except Exception as e:
             print(f"Error in adding a person \n{e}")
             return False
+
+    def remove_person(self, name:str) -> bool:
+        try:
+            # remove from the two lists
+            self.known_person.remove(name)
+            file = os.path.join(f"profiles/{name}.jpg")
+            known_image = face_recognition.load_image_file(file)
+            self.known_face_encodings.remove(face_recognition.face_encodings(known_image)[0])
+            # remove from the files
+            os.remove(file)
+            return True
+        except Exception as e:
+            print(f"Error in removing the person \n{e}")
+            return False
+
+
     def get_people(self):
         # Initialize some variables
         face_locations = []
@@ -115,4 +135,5 @@ class SmartBell:
 
         ret, jpeg = cv2.imencode('.jpg', image)
         return jpeg.tobytes(), face_names
+
 
