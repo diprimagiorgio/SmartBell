@@ -20,9 +20,8 @@ class SmartBell:
 
     # maybe I'd like to use a dictonary or store in a database
 
-    known_person = []  # Name of person string
-    known_face_encodings = []  # Encoding object
 
+    known_prsn = {}
 
 
     def __init__(self):
@@ -34,13 +33,12 @@ class SmartBell:
 
     def __del__(self):
         self.video.release()
-    def add_person(self, file: str) -> bool:
+    def add_person(self, file_name: str) -> bool:
         try:
             # Extracting person name from the image filename eg: david.jpg
-            self.known_person.append(file.replace(".jpg", ""))
-            file = os.path.join("profiles/", file)
+            file = os.path.join("profiles/", file_name)
             known_image = face_recognition.load_image_file(file)
-            self.known_face_encodings.append(face_recognition.face_encodings(known_image)[0])
+            self.known_prsn[file_name.replace(".jpg", "")] = face_recognition.face_encodings(known_image)[0]
             return True
         except IndexError as e:
             print (f"Impossible to find the person in the img : {file}")
@@ -52,16 +50,24 @@ class SmartBell:
     def remove_person(self, name:str) -> bool:
         try:
             # remove from the two lists
-            self.known_person.remove(name)
-            file = os.path.join(f"profiles/{name}.jpg")
-            known_image = face_recognition.load_image_file(file)
-            self.known_face_encodings.remove(face_recognition.face_encodings(known_image)[0])
+
+            file = os.path.join("profiles/", f"{name}.jpg")
+
+            self.known_prsn.pop(name)
+
             # remove from the files
             os.remove(file)
             return True
         except Exception as e:
             print(f"Error in removing the person \n{e}")
             return False
+
+    @property
+    def get_known_face_encodings(self) -> list:
+        return list(self.known_prsn.values())
+    @property
+    def get_known_person(self) -> list:
+        return  list(self.known_prsn.keys())
 
 
     def get_people(self):
@@ -93,17 +99,19 @@ class SmartBell:
             face_names = []
             for face_encoding in face_encodings:
                 # See if the face is a match for the known face(s), return a list of true or false
-                matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding, tolerance=self.tolerance)
+                matches = face_recognition.compare_faces(self.get_known_face_encodings, face_encoding, tolerance=self.tolerance)
                 name = "Unknown"
 
                 # print(face_encoding)
                 print(matches)
                 # we can have multiple faces that match, but we want the most similar
-                face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
+                face_distances = face_recognition.face_distance(self.get_known_face_encodings, face_encoding)
                 best_match_index = np.argmin(face_distances)
                 #if the face with the minimum distance is, True because of the function compare_faces
                 if matches[best_match_index]:
-                    name = self.known_person[best_match_index]
+                    #TODO understand if it's the best thing
+                    p = np.array(self.get_known_person)
+                    name = p[best_match_index]
 
                 print(name)
                 # print(face_locations)
@@ -111,7 +119,7 @@ class SmartBell:
                 print(face_names)
 
         process_this_frame = not process_this_frame
-        return (image, face_locations, face_names)
+        return image, face_locations, face_names
 
 
     def get_frame(self):

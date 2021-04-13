@@ -171,7 +171,7 @@ def list_cmd(update: Update, _: CallbackContext) -> int:
     global smart_bell
     buttons = []
 
-    for name in smart_bell.known_person:
+    for name in smart_bell.get_known_person:
         buttons.append( [ InlineKeyboardButton(text=name,
                                 callback_data=f"{name}"),
                           InlineKeyboardButton(text= u"\u274C",
