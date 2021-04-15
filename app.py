@@ -6,7 +6,6 @@ from mqtt_message import MyMQTT
 
 
 app = Flask(__name__)
-update = None
 smart_bell = None
 @app.route('/')
 def move():
@@ -17,12 +16,12 @@ def gen(smart_bell: SmartBell):
     while True:
         frame, face_names = smart_bell.get_frame()
         
-        if update and face_names:
+        if face_names:
 
             MyMQTT.send(topic="doorbell", message=face_names)
 
             #send_door_message(update=update, face_names=face_names)
-            send_door_photo(update, face_names, frame)
+            send_door_photo(face_names, frame)
 
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
@@ -37,19 +36,19 @@ def video_feed():
 
 @app.route("/init")
 def init():
-    global  update, smart_bell
+    global smart_bell
 
-
-    # for telegram
-    update = telegram_init()
 
     # for camera
     smart_bell = SmartBell()
 
-    set_smart_bell(smart_bell)
+
+    # for telegram
+    telegram_init(smart_bell)
+
 
 
     return "Init done"
 
-if __name__ == '__main__':
-    app.run(threaded=True)
+#if __name__ == '__main__':#
+#    app.run(threaded=True)

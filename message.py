@@ -27,10 +27,16 @@ ADD_NAME, ADD_PHOTO = range(2)
 logger = logging.getLogger(__name__)
 last_visit = {} # last time that we have sent a message for that person
 user = None
+
+updater: Updater = None
+smart_bell : SmartBell = None
+
 #------------------------------------------------- INITIALIZER
 
-def telegram_init() -> Update:
+def telegram_init(sm_bell: SmartBell):
     """Start the bot."""
+    global updater, smart_bell
+    smart_bell = sm_bell
 
     # Create the Updater and pass it your bot's token.
     updater = Updater("1762984493:AAHHm6S4qCJjqWLi4aNz5Qq8SIIlOJM798A")
@@ -75,15 +81,10 @@ def telegram_init() -> Update:
     dispatcher.add_handler(CommandHandler("list", list_cmd))
     dispatcher.add_handler(CallbackQueryHandler(remove_callback))
 
-    #I'd like to simulate a conversation after the command
-    #dispatcher.add_handler(CommandHandler("newFace", new_face_command))
-
-    #dispatcher.add_handler(MessageHandler(Filters.photo, image_handler))
 
     # Start the Bot
     updater.start_polling()
 
-    return updater
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
@@ -123,11 +124,7 @@ def new_face_command(update: Update, _: CallbackContext) -> None:
     print(update.message.photo.file_id)
 #------------------------------------------------- ADD COMMAND
 add_name = None
-smart_bell : SmartBell = None
-#TODO  fix this is horrible, maybe i should do a class
-def set_smart_bell(sm_bell):
-    global smart_bell
-    smart_bell = sm_bell
+
 
 def add_cmd(update: Update, _: CallbackContext) -> int:
     user = update.message.from_user
@@ -137,8 +134,8 @@ def add_cmd(update: Update, _: CallbackContext) -> int:
         'so I know how to call her/him.',
         reply_markup=ReplyKeyboardRemove(),
     )
-
     return ADD_NAME
+
 def add_image_handler(update: Update, _: CallbackContext) -> int:
     global smart_bell
     user = update.message.from_user
@@ -149,7 +146,7 @@ def add_image_handler(update: Update, _: CallbackContext) -> int:
     if smart_bell.add_person(f'{add_name}.jpg'):
         update.message.reply_text(
             f'Gorgeous! Image of {add_name} uploaded',
-            reply_markup=ReplyKeyboardRemove(),
+            #reply_markup=ReplyKeyboardRemove(),
 
         )
         return ConversationHandler.END
@@ -205,9 +202,10 @@ def rw_last_visit(now, delta : int, person: str) -> bool:
         return True
     else:
         return False
-def send_door_message(updater: Updater, face_names: List) -> None:
+def send_door_message( face_names: List) -> None:
     if not user:
         return
+    global updater
     """Write who is at the door, only if is some time has passed from the last message"""
     time_delta = 20
     for name in face_names:
@@ -215,9 +213,11 @@ def send_door_message(updater: Updater, face_names: List) -> None:
             if rw_last_visit(datetime.now(), time_delta, name):
                 updater.bot.send_message(chat_id=user.id, text=f'Hey there is {name} at the door!')
 
-def send_door_photo(updater: Updater, face_names:List, photo) -> None:
+def send_door_photo( face_names:List, photo) -> None:
+
     if not user:
         return
+    global updater
     names = ""
     #get names
     #for name in face_names:
