@@ -1,0 +1,11 @@
+face_recognition
+face_recognition_models
+Click>=6.0
+dlib>=19.3.0
+numpy>=1.17.3
+Pillow
+scipy>=0.17.0
+Flask
+python-telegram-bot
+opencv-python
+paho-mqtt
