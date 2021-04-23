@@ -1,16 +1,20 @@
-
+#https://stackoverflow.com/questions/57748375/unable-to-install-dlib-from-dockerfile-on-raspberry-pi
+# https://docs.docker.com/language/python/run-containers/
+# https://github.com/Ellerbach/Raspberry-IoTEdge
 from flask import Flask, render_template, Response, request
 from smartbell import SmartBell
-from message import telegram_init, send_door_message, send_door_photo, set_smart_bell
+from smartBell_telegram_bot import telegram_init, send_door_message, send_door_photo
 from mqtt_message import MyMQTT
 
 
 app = Flask(__name__)
+ #I can remove it if i'm able to put in main
 smart_bell = None
+
+
 @app.route('/')
 def move():
     return render_template('index.html')
-
 
 def gen(smart_bell: SmartBell):
     while True:
@@ -30,25 +34,23 @@ def gen(smart_bell: SmartBell):
 def video_feed():
     return Response(gen(smart_bell),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
-#---------------------mqtt shit
-
 
 
 @app.route("/init")
 def init():
-    global smart_bell
-
-
     # for camera
+    global smart_bell
     smart_bell = SmartBell()
-
-
     # for telegram
     telegram_init(smart_bell)
+    return "init done"
 
 
-
-    return "Init done"
-
-#if __name__ == '__main__':#
-#    app.run(threaded=True)
+"""if __name__ == '__main__':
+    # for camera
+    global smart_bell
+    smart_bell = SmartBell()
+    # for telegram
+    telegram_init(smart_bell)
+    app.run(debug=True)
+"""

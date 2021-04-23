@@ -17,13 +17,10 @@ class SmartBell:
     tolerance = 0.6
 
     # Store objects in array
-
     # maybe I'd like to use a dictonary or store in a database
 
 
     known_prsn = {}
-
-
     def __init__(self):
         #get a reference to the camera
         self.video = cv2.VideoCapture(0)
@@ -33,6 +30,8 @@ class SmartBell:
 
     def __del__(self):
         self.video.release()
+
+    # TODO when I'm adding a user if there is someone at the door I have an error - lock
     def add_person(self, file_name: str) -> bool:
         try:
             # Extracting person name from the image filename eg: david.jpg
@@ -144,4 +143,12 @@ class SmartBell:
         ret, jpeg = cv2.imencode('.jpg', image)
         return jpeg.tobytes(), face_names
 
+    # return a string with the names in the list of names
+    #TODO better
+    @staticmethod
+    def get_names_list(list_names):
+        msg = ""
+        for name in list_names:
+            msg += " , " + name
+        return msg
 
