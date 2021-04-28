@@ -1,0 +1,87 @@
+version: '3.6'
+services:
+  plex:
+    image: linuxserver/plex:bionic
+    container_name: plex
+    network_mode: host
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - VERSION=docker
+    volumes:
+    - plex_data:/config
+    - ~/plex_media:/media
+    restart: unless-stopped
+
+  home_assistant:
+    container_name: home_assistant
+    image: homeassistant/home-assistant:stable
+    restart: unless-stopped
+    ports:
+    - "8123:8123"
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./volumes/home_assistant:/config
+  #network_mode: host
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto
+    restart: unless-stopped
+    user: "1883"
+    ports:
+    - "1883:1883"
+    volumes:
+    - ./volumes/mosquitto/data:/mosquitto/data
+    - ./volumes/mosquitto/log:/mosquitto/log
+    - ./volumes/mosquitto/pwfile:/mosquitto/pwfile
+    - ./services/mosquitto:/mosquitto/config:ro
+    networks:
+    - iotstack_nw
+
+  portainer-ce:
+    container_name: portainer-ce
+    image: portainer/portainer-ce
+    restart: unless-stopped
+    ports:
+    - "8000:8000"
+    - "9000:9000"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./volumes/portainer-ce/data:/data
+
+  camera:
+    container_name: camera
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: always
+    network_mode: host
+    volumes:
+      - /opt/vc:/opt/vc
+      #- ./python:/app
+    environment:
+      LD_LIBRARY_PATH: /opt/vc/lib
+      DISPLAY:
+    devices:
+      - "/dev/vchiq:/dev/vchiq"
+    privileged: true
+networks:
+  iotstack_nw: # Exposed by your host.
+    # external: true
+    name: IOTstack_Net
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 10.77.60.0/24
+        # - gateway: 10.77.60.1
+
+  # default:
+  #   external: true
+  #   name: iotstack_nw
+
+  # hosts_nw:
+  #   driver: hosts
+volumes:
+        plex_data:
