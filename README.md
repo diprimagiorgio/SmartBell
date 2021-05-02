@@ -51,3 +51,14 @@ We have followed [this tutorial](https://docs.docker.com/language/python/build-i
 The installation can take a very long time (hours).
 One of the problems that we faced was that from the container we were not able to access the camera, but thanks to [this tutorial](https://medium.com/swlh/how-to-access-the-raspberry-pi-camera-inside-docker-and-opencv-5fa25e092d91) we managed to solve the problem.
 ### Possible update
+* Save the clip of video in a database, of when a person is recognized in front of the camera.
+* When an unknown person is in front of the camera, could be possible to add the person
+to the known person list from the telegram bot
+*  With the message to notify the user, we can also add a link to check the live-streaming
+of the camera
+* Scaling the solution to allow multiple user with different smart bell to use the telegram
+bot
+  
+## To start
+
+When you lunch the app the first page to visit is [/init](localhost:5000/init), when the message with init done appear, you can visit the index page. 
