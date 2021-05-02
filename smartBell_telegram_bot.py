@@ -5,9 +5,8 @@ The bot is able to
     insert a person in the smart bell, i this way the smart bell is able to recognize her/him
     remove person from the smart bell
     see a list of all the person present in the db
-    recive a message every time that someone is at the door
+    receive a message every time that someone is at the door
 """
-#TODO I'd like to have the possibility of setting th etime delta for the message and a variable that says if we are interestin reciving the messages
 import logging
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
@@ -77,7 +76,7 @@ def start(update: Update, _: CallbackContext) -> None:
     update.message.reply_markdown_v2(
         f'Hi {user.mention_markdown_v2()}\!'
     )
-    logger.info(f'{user} si è loggato ')
+    logger.info(f'{user} log in ')
     update.message.reply_text(
         'Hi! My name is The Smart Bell Bot. I will help you to see who is at your door, without needing to move from your sofa. '
         'You need to send me the img of the person that i want to recognise with the command \ add .\n\n'
@@ -175,7 +174,7 @@ def remove_callback(update: Update, _: CallbackContext) -> int:
 
 #the function checks if time delta is passed form last visit and update the last visit
 # Ture if I should send the message and, in that case I have uploaded the last visit
-# false no needed to send the message and I have not uploaded the last messag/visit
+# false no needed to send the message and I have not uploaded the last message/visit
 def rw_last_visit(now, delta : int, person: str) -> bool:
     # if never sent or sent more than delta seconds ago
     if last_message.get(person) is None or (now - last_message.get(person)).total_seconds() > delta:

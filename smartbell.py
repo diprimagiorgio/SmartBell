@@ -1,9 +1,3 @@
-# Modified by smartbuilds.io
-# Date: 27.06.20
-# Desc: This scrtipt is running a face recongition of a live webcam stream. This is a modifed
-# code of the orginal Ageitgey (GitHub) face recognition demo to include multiple faces.
-# Simply add the your desired 'passport-style' face to the 'profiles' folder.
-
 import face_recognition
 import cv2
 import numpy as np
@@ -15,11 +9,7 @@ class SmartBell:
 
     face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
     tolerance = 0.6
-
-    # Store objects in array
-    # maybe I'd like to use a dictonary or store in a database
-
-
+    # dictionary of person_name : face_encoding
     known_prsn = {}
     def __init__(self):
         #get a reference to the camera
@@ -31,7 +21,7 @@ class SmartBell:
     def __del__(self):
         self.video.release()
 
-    # TODO when I'm adding a user if there is someone at the door I have an error - lock
+    # TODO when I'm adding a user if there is someone at the door I'm using the same structure ( lock ? )
     def add_person(self, file_name: str) -> bool:
         try:
             # Extracting person name from the image filename eg: david.jpg
@@ -49,7 +39,6 @@ class SmartBell:
     def remove_person(self, name:str) -> bool:
         try:
             # remove from the two lists
-
             file = os.path.join("profiles/", f"{name}.jpg")
 
             self.known_prsn.pop(name)
@@ -108,7 +97,6 @@ class SmartBell:
                 best_match_index = np.argmin(face_distances)
                 #if the face with the minimum distance is, True because of the function compare_faces
                 if matches[best_match_index]:
-                    #TODO understand if it's the best thing
                     p = np.array(self.get_known_person)
                     name = p[best_match_index]
 
@@ -144,7 +132,7 @@ class SmartBell:
         return jpeg.tobytes(), face_names
 
     # return a string with the names in the list of names
-    #TODO better
+    #TODO I can do it fancier, no comma at the beginning
     @staticmethod
     def get_names_list(list_names):
         msg = ""
